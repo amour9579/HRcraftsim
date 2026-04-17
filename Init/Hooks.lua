@@ -68,7 +68,9 @@ eventFrame:SetScript("OnEvent", function(_, event)
       C_Timer.After(1, tryAttach)
     end
 
-    if IsAddOnLoaded("Blizzard_Professions") then
+    local IsAddOnLoadedCompat = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+
+    if IsAddOnLoadedCompat and IsAddOnLoadedCompat("Blizzard_Professions") then
       tryAttach()
     else
       local waitFrame = CreateFrame("Frame")
