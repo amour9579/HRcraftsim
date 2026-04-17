@@ -1,0 +1,22 @@
+## Interface: 120001
+## Title: HRcraftsim
+## Notes: Work Order full-purchase cost simulator
+## Author: HR
+## Version: 0.1.0
+## SavedVariables: HRcraftsimDB
+## OptionalDeps: Auctionator
+
+Const.lua
+Util.lua
+Core.lua
+EventBus.lua
+Data/SimulationState.lua
+Data/PriceCache.lua
+Pricing/AuctionatorProvider.lua
+Data/RecipeReader.lua
+Calc/CostEngine.lua
+UI/SummaryBar.lua
+UI/ReagentList.lua
+UI/OptionalSlotPicker.lua
+UI/MainPanel.lua
+Init/Hooks.lua
