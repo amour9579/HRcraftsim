@@ -2,7 +2,7 @@ local addonName, ns = ...
 
 HRcraftsim = ns
 ns.name = addonName
-ns.version = "0.1.0"
+ns.version = "0.1.1"
 ns.db = nil
 ns.initialized = false
 
@@ -46,8 +46,35 @@ function ns:RefreshSimulation()
     return
   end
 
-  self.SimulationState:ResetFromRecipeData(recipeData)
+  self.SimulationState:ResetFromRecipeData(recipeData, true)
   self.PriceCache:PopulateSimulationPrices(self.SimulationState.state)
   self.CostEngine:Calculate(self.SimulationState.state)
   self.MainPanel:Render(self.SimulationState.state)
+end
+
+function ns:RecalculateAndRender()
+  self.PriceCache:PopulateSimulationPrices(self.SimulationState.state)
+  self.CostEngine:Calculate(self.SimulationState.state)
+  if self.MainPanel and self.MainPanel:IsShown() then
+    self.MainPanel:Render(self.SimulationState.state)
+  end
+end
+
+SLASH_HRCRAFTSIM1 = "/hrcs"
+SlashCmdList.HRCRAFTSIM = function(msg)
+  msg = strtrim((msg or ""):lower())
+
+  if msg == "debug" then
+    ns.db.debug = not ns.db.debug
+    ns:Print("디버그 모드: " .. (ns.db.debug and "ON" or "OFF"))
+    return
+  end
+
+  if msg == "refresh" then
+    ns:RefreshSimulation()
+    ns:Print("시뮬레이션 새로고침")
+    return
+  end
+
+  ns:Print("명령어: /hrcs debug, /hrcs refresh")
 end

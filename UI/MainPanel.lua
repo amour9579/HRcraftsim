@@ -36,9 +36,18 @@ function ns:CreateMainPanel(parent)
     end
   end)
 
-  panel.title = ns.Util:CreateLabel(panel, "HRcraftsim", "TOPLEFT", panel, "TOPLEFT", 10, -10)
-  panel.meta = ns.Util:CreateLabel(panel, "기준: 전량 구매 / 가격 소스: Auctionator", "TOPLEFT", panel.title, "BOTTOMLEFT", 0, -4)
-  panel.status = ns.Util:CreateLabel(panel, "", "TOPLEFT", panel.meta, "BOTTOMLEFT", 0, -6)
+  panel.title = ns.Util:CreateLabel(panel, "HRcraftsim", "TOPLEFT", panel, "TOPLEFT", 10, -10, "GameFontHighlightLarge")
+  panel.meta = ns.Util:CreateLabel(panel, "기준: 전량 구매 / 가격 소스: Auctionator", "TOPLEFT", panel.title, "BOTTOMLEFT", 0, -4, "GameFontDisableSmall")
+
+  panel.refreshButton = CreateFrame("Button", nil, panel, "UIPanelButtonTemplate")
+  panel.refreshButton:SetSize(60, 20)
+  panel.refreshButton:SetPoint("TOPRIGHT", panel, "TOPRIGHT", -10, -10)
+  panel.refreshButton:SetText("새로고침")
+  panel.refreshButton:SetScript("OnClick", function()
+    ns:RefreshSimulation()
+  end)
+
+  panel.status = ns.Util:CreateLabel(panel, "", "TOPLEFT", panel.meta, "BOTTOMLEFT", 0, -6, "GameFontNormal")
   panel.status:SetTextColor(0.9, 0.82, 0.2)
 
   panel.reagentList = ns.ReagentList:Create(panel)

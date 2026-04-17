@@ -11,9 +11,9 @@ local function CreateRow(parent)
   row.icon:SetPoint("LEFT", row, "LEFT", 0, 0)
 
   row.name = ns.Util:CreateLabel(row, "", "LEFT", row.icon, "RIGHT", 4, 0)
-  row.qty = ns.Util:CreateLabel(row, "", "LEFT", row, "LEFT", 170, 0)
-  row.unit = ns.Util:CreateLabel(row, "", "LEFT", row, "LEFT", 205, 0)
-  row.subtotal = ns.Util:CreateLabel(row, "", "RIGHT", row, "RIGHT", 0, 0)
+  row.qty = ns.Util:CreateLabel(row, "", "LEFT", row, "LEFT", 165, 0, "GameFontHighlightSmall")
+  row.unit = ns.Util:CreateLabel(row, "", "LEFT", row, "LEFT", 205, 0, "GameFontHighlightSmall")
+  row.subtotal = ns.Util:CreateLabel(row, "", "RIGHT", row, "RIGHT", 0, 0, "GameFontHighlightSmall")
 
   function row:Render(reagent)
     self:Show()
@@ -33,9 +33,10 @@ end
 
 function ns.ReagentList:Create(parent)
   local frame = CreateFrame("Frame", nil, parent)
-  frame:SetSize(ns.CONST.PANEL_WIDTH - 20, 145)
+  frame:SetSize(ns.CONST.PANEL_WIDTH - 20, 165)
 
-  frame.title = ns.Util:CreateLabel(frame, "필수 재료", "TOPLEFT", frame, "TOPLEFT", 0, 0)
+  frame.title = ns.Util:CreateLabel(frame, "필수 재료", "TOPLEFT", frame, "TOPLEFT", 0, 0, "GameFontHighlight")
+  frame.header = ns.Util:CreateLabel(frame, "수량 / 단가 / 소계", "TOPRIGHT", frame, "TOPRIGHT", 0, 0, "GameFontDisableSmall")
   frame.rows = {}
 
   local previous = frame.title

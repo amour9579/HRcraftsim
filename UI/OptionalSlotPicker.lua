@@ -4,21 +4,39 @@ ns.OptionalSlotPicker = {}
 
 HRcraftsimContextMenu = HRcraftsimContextMenu or CreateFrame("Frame", "HRcraftsimContextMenu", UIParent, "UIDropDownMenuTemplate")
 
+local function ApplySelection(slotIndex, candidateIndex)
+  ns.SimulationState:SetOptionalSelection(slotIndex, candidateIndex)
+  ns:RecalculateAndRender()
+end
+
 local function CreateSlotRow(parent)
   local row = CreateFrame("Frame", nil, parent)
-  row:SetSize(parent:GetWidth(), 22)
+  row:SetSize(parent:GetWidth(), 38)
 
-  row.label = ns.Util:CreateLabel(row, "", "LEFT", row, "LEFT", 0, 0)
+  row.label = ns.Util:CreateLabel(row, "", "TOPLEFT", row, "TOPLEFT", 0, 0, "GameFontHighlightSmall")
+  row.meta = ns.Util:CreateLabel(row, "", "TOPLEFT", row.label, "BOTTOMLEFT", 0, -2, "GameFontDisableSmall")
 
   row.button = CreateFrame("Button", nil, row, "UIPanelButtonTemplate")
-  row.button:SetSize(148, 20)
-  row.button:SetPoint("RIGHT", row, "RIGHT", 0, 0)
+  row.button:SetSize(150, 20)
+  row.button:SetPoint("RIGHT", row, "RIGHT", 0, 8)
   row.button:SetText("없음")
+
+  row.cost = ns.Util:CreateLabel(row, "", "RIGHT", row, "BOTTOMRIGHT", 0, 0, "GameFontHighlightSmall")
 
   function row:SetSlotData(slotData)
     self.slotData = slotData
     self.label:SetText(slotData.slotName or ("선택 재료 " .. tostring(slotData.slotIndex)))
+    self.meta:SetText(string.format("후보 %d개 / 수량 x%d", #(slotData.candidates or {}), slotData.quantity or 1))
     self.button:SetText(slotData.selectedName or "없음")
+    if slotData.selectedItemID then
+      if slotData.subtotal then
+        self.cost:SetText(ns.Util:FormatMoney(slotData.subtotal))
+      else
+        self.cost:SetText("가격 없음")
+      end
+    else
+      self.cost:SetText("미선택")
+    end
   end
 
   function row:OpenMenu()
@@ -31,23 +49,18 @@ local function CreateSlotRow(parent)
       text = "없음",
       checked = self.slotData.selectedIndex == 0,
       func = function()
-        ns.SimulationState:SetOptionalSelection(self.slotData.slotIndex, 0)
-        ns.PriceCache:PopulateSimulationPrices(ns.SimulationState.state)
-        ns.CostEngine:Calculate(ns.SimulationState.state)
-        ns.MainPanel:Render(ns.SimulationState.state)
+        ApplySelection(self.slotData.slotIndex, 0)
       end,
     })
 
     for index, candidate in ipairs(self.slotData.candidates or {}) do
-      local label = candidate.name
+      local cachedPrice = ns.PriceCache:Get(candidate.itemID)
+      local suffix = cachedPrice and (" - " .. ns.Util:FormatMoney(cachedPrice.price)) or ""
       table.insert(menu, {
-        text = label,
+        text = (candidate.name or ("item:" .. tostring(candidate.itemID))) .. suffix,
         checked = self.slotData.selectedIndex == index,
         func = function()
-          ns.SimulationState:SetOptionalSelection(self.slotData.slotIndex, index)
-          ns.PriceCache:PopulateSimulationPrices(ns.SimulationState.state)
-          ns.CostEngine:Calculate(ns.SimulationState.state)
-          ns.MainPanel:Render(ns.SimulationState.state)
+          ApplySelection(self.slotData.slotIndex, index)
         end,
       })
     end
@@ -74,13 +87,13 @@ end
 
 function ns.OptionalSlotPicker:Create(parent)
   local frame = CreateFrame("Frame", nil, parent)
-  frame:SetSize(ns.CONST.PANEL_WIDTH - 20, 110)
+  frame:SetSize(ns.CONST.PANEL_WIDTH - 20, 145)
 
-  frame.title = ns.Util:CreateLabel(frame, "선택 재료 시뮬레이션", "TOPLEFT", frame, "TOPLEFT", 0, 0)
+  frame.title = ns.Util:CreateLabel(frame, "선택 재료 시뮬레이션", "TOPLEFT", frame, "TOPLEFT", 0, 0, "GameFontHighlight")
   frame.rows = {}
 
   local previous = frame.title
-  for i = 1, 4 do
+  for i = 1, ns.CONST.MAX_OPTIONAL_ROWS do
     local row = CreateSlotRow(frame)
     row:SetPoint("TOPLEFT", previous, i == 1 and "BOTTOMLEFT" or "BOTTOMLEFT", 0, i == 1 and -6 or -4)
     table.insert(frame.rows, row)

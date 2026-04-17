@@ -46,6 +46,9 @@ function ns.PriceCache:PopulateSimulationPrices(simulation)
   for _, slot in ipairs(simulation.optionalSlots or {}) do
     if slot.selectedItemID then
       slot.unitPrice, slot.priceSource = self:GetOrFetch(slot.selectedItemID)
+    else
+      slot.unitPrice = nil
+      slot.priceSource = nil
     end
   end
 end

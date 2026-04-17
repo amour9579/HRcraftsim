@@ -32,5 +32,6 @@ function ns.CostEngine:Calculate(state)
 
   state.totalCost = total
   state.missingPriceCount = missing
+  state.isPartial = missing > 0
   return total, missing
 end

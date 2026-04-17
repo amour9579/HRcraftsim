@@ -11,6 +11,18 @@ function ns.Util:SafeCall(fn, ...)
   return result
 end
 
+function ns.Util:Debug(...)
+  if not ns.db or not ns.db.debug then
+    return
+  end
+
+  local parts = {}
+  for i = 1, select("#", ...) do
+    parts[#parts + 1] = tostring(select(i, ...))
+  end
+  ns:Print("[DEBUG] " .. table.concat(parts, " "))
+end
+
 function ns.Util:FormatMoney(copper)
   copper = math.max(0, tonumber(copper) or 0)
   local gold = math.floor(copper / 10000)
@@ -24,12 +36,21 @@ function ns.Util:GetItemNameAndIcon(itemID)
     return "Unknown", 134400
   end
 
+  local item = Item and Item:CreateFromItemID(itemID)
+  if item and item.GetItemName then
+    local itemName = item:GetItemName()
+    local itemIcon = C_Item and C_Item.GetItemIconByID and C_Item.GetItemIconByID(itemID)
+    if itemName then
+      return itemName, itemIcon or 134400
+    end
+  end
+
   local name, _, _, _, _, _, _, _, _, icon = GetItemInfo(itemID)
   return name or ("item:" .. tostring(itemID)), icon or 134400
 end
 
-function ns.Util:CreateLabel(parent, text, anchorPoint, relativeTo, relativePoint, x, y)
-  local fs = parent:CreateFontString(nil, "OVERLAY", "GameFontNormal")
+function ns.Util:CreateLabel(parent, text, anchorPoint, relativeTo, relativePoint, x, y, fontObject)
+  local fs = parent:CreateFontString(nil, "OVERLAY", fontObject or "GameFontNormal")
   fs:SetPoint(anchorPoint, relativeTo, relativePoint, x or 0, y or 0)
   fs:SetJustifyH("LEFT")
   fs:SetText(text or "")

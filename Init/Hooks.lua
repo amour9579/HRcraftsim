@@ -1,7 +1,10 @@
 local _, ns = ...
 
+local IsAddOnLoadedCompat = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
+
 ns.Hooks = {
   attached = false,
+  callbacksRegistered = false,
 }
 
 local function RefreshIfEnabled()
@@ -23,9 +26,10 @@ function ns.Hooks:Attach()
 
   ns:CreateMainPanel(orderDetails)
 
-  if schematicForm.RegisterCallback then
+  if not self.callbacksRegistered and schematicForm.RegisterCallback and ProfessionsRecipeSchematicFormMixin and ProfessionsRecipeSchematicFormMixin.Event then
     schematicForm:RegisterCallback(ProfessionsRecipeSchematicFormMixin.Event.AllocationsModified, RefreshIfEnabled)
     schematicForm:RegisterCallback(ProfessionsRecipeSchematicFormMixin.Event.UseBestQualityModified, RefreshIfEnabled)
+    self.callbacksRegistered = true
   end
 
   orderDetails:HookScript("OnShow", function()
@@ -41,7 +45,7 @@ function ns.Hooks:Attach()
     end
   end)
 
-  if ns:IsAuctionatorAvailable() then
+  if ns:IsAuctionatorAvailable() and Auctionator.API.v1.RegisterForDBUpdate then
     Auctionator.API.v1.RegisterForDBUpdate(ns.CONST.CALLER_ID, function()
       ns.PriceCache:InvalidateAll()
       RefreshIfEnabled()
@@ -58,6 +62,7 @@ eventFrame:SetScript("OnEvent", function(_, event)
   if event == "PLAYER_LOGIN" then
     HRcraftsimDB = HRcraftsimDB or {
       version = ns.version,
+      debug = ns.CONST.DEBUG_DEFAULT,
     }
     ns.db = HRcraftsimDB
 
@@ -67,8 +72,6 @@ eventFrame:SetScript("OnEvent", function(_, event)
       end
       C_Timer.After(1, tryAttach)
     end
-
-    local IsAddOnLoadedCompat = (C_AddOns and C_AddOns.IsAddOnLoaded) or IsAddOnLoaded
 
     if IsAddOnLoadedCompat and IsAddOnLoadedCompat("Blizzard_Professions") then
       tryAttach()

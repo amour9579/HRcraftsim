@@ -12,7 +12,40 @@ ns.SimulationState = {
   },
 }
 
-function ns.SimulationState:ResetFromRecipeData(recipeData)
+local function BuildOptionalSelectionMap(previousState)
+  local map = {}
+  if not previousState or not previousState.optionalSlots then
+    return map
+  end
+
+  for _, slot in ipairs(previousState.optionalSlots) do
+    map[slot.slotIndex] = {
+      selectedItemID = slot.selectedItemID,
+      selectedIndex = slot.selectedIndex,
+    }
+  end
+  return map
+end
+
+local function ResolveSelectedCandidate(slot, previousSelection)
+  if previousSelection and previousSelection.selectedItemID then
+    for index, candidate in ipairs(slot.candidates or {}) do
+      if candidate.itemID == previousSelection.selectedItemID then
+        return index, candidate
+      end
+    end
+  end
+
+  local selectedIndex = slot.selectedCandidateIndex or 0
+  local selectedCandidate = selectedIndex > 0 and slot.candidates[selectedIndex] or nil
+  return selectedIndex, selectedCandidate
+end
+
+function ns.SimulationState:ResetFromRecipeData(recipeData, preserveSelections)
+  local previousState = preserveSelections and self.state or nil
+  local previousSelections = BuildOptionalSelectionMap(previousState)
+  local sameRecipe = previousState and previousState.recipeID == recipeData.recipeID
+
   self.state.recipeID = recipeData.recipeID
   self.state.recipeName = recipeData.recipeName
   self.state.requiredReagents = {}
@@ -34,8 +67,8 @@ function ns.SimulationState:ResetFromRecipeData(recipeData)
   end
 
   for _, slot in ipairs(recipeData.optionalSlots or {}) do
-    local selectedIndex = slot.selectedCandidateIndex or 0
-    local selectedCandidate = selectedIndex > 0 and slot.candidates[selectedIndex] or nil
+    local previousSelection = sameRecipe and previousSelections[slot.slotIndex] or nil
+    local selectedIndex, selectedCandidate = ResolveSelectedCandidate(slot, previousSelection)
 
     table.insert(self.state.optionalSlots, {
       slotIndex = slot.slotIndex,
