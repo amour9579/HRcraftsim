@@ -2,7 +2,7 @@
 ## Title: HRcraftsim
 ## Notes: Standalone craft material parser and calculator
 ## Author: OpenAI
-## Version: 0.1.0
+## Version: 0.1.2
 ## SavedVariables: HRcraftsimDB
 
 Core.lua
