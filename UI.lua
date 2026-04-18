@@ -1,10 +1,10 @@
-\
 local addonName, ns = ...
 
 ns.UI = ns.UI or {}
 local UI = ns.UI
 
 local rowHeight = 26
+local rowSpacing = 4
 local rows = {}
 
 local function setBackdrop(frame)
@@ -49,14 +49,38 @@ local function createScrollEdit(parent, width, height)
   scroll:SetPoint("BOTTOMRIGHT", -28, 8)
 
   local edit = CreateFrame("EditBox", nil, scroll)
-  edit:SetMultiLine(true)
-  edit:SetAutoFocus(false)
-  edit:SetFontObject(ChatFontNormal)
-  edit:SetWidth(width - 42)
-  edit:SetScript("OnEscapePressed", edit.ClearFocus)
+edit:SetMultiLine(true)
+edit:SetAutoFocus(false)
+edit:SetFontObject(ChatFontNormal)
+edit:SetWidth(width - 42)
+edit:EnableMouse(true)
+edit:SetCursorPosition(0)
+edit:SetScript("OnEscapePressed", edit.ClearFocus)
+holder:EnableMouse(true)
+holder:SetScript("OnMouseDown", function()
+  edit:SetFocus()
+end)
+edit:SetScript("OnEditFocusGained", function()
+  if holder.SetBackdropBorderColor then
+    holder:SetBackdropBorderColor(1, 0.82, 0, 1)
+  end
+end)
+edit:SetScript("OnEditFocusLost", function()
+  if holder.SetBackdropBorderColor then
+    holder:SetBackdropBorderColor(0.35, 0.35, 0.45, 1)
+  end
+end)
   edit:SetScript("OnTextChanged", function(self)
-    self:SetHeight(math.max(height - 22, self:GetStringHeight() + 20))
-    scroll:UpdateScrollChildRect()
+    local text = self:GetText() or ""
+    local lines = 1
+    for _ in string.gmatch(text, "\n") do
+      lines = lines + 1
+    end
+    local lineHeight = 14
+    self:SetHeight(math.max(height - 22, lines * lineHeight + 20))
+    if scroll.UpdateScrollChildRect then
+      scroll:UpdateScrollChildRect()
+    end
   end)
   scroll:SetScrollChild(edit)
 
@@ -82,8 +106,8 @@ local function ensureRow(index)
   local parent = UI.scrollChild
   local row = CreateFrame("Frame", nil, parent, "BackdropTemplate")
   row:SetHeight(rowHeight)
-  row:SetPoint("LEFT", 2, 0)
-  row:SetPoint("RIGHT", -2, 0)
+  row:SetPoint("LEFT", parent, "LEFT", 2, 0)
+  row:SetPoint("RIGHT", parent, "RIGHT", -2, 0)
   setBackdrop(row)
   row:SetBackdropColor(0.08, 0.08, 0.11, 0.65)
 
@@ -129,20 +153,20 @@ local function ensureRow(index)
   return row
 end
 
-function UI:LayoutRows()
+function UI:LayoutRows(count)
   local prev
-  for i, row in ipairs(rows) do
+  for i = 1, count do
+    local row = rows[i]
     row:ClearAllPoints()
     if not prev then
       row:SetPoint("TOPLEFT", self.scrollChild, "TOPLEFT", 0, 0)
     else
-      row:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -4)
+      row:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -rowSpacing)
     end
     prev = row
   end
 
-  local used = #rows
-  local contentHeight = math.max(used * (rowHeight + 4), 1)
+  local contentHeight = math.max(count * (rowHeight + rowSpacing), 1)
   self.scrollChild:SetHeight(contentHeight)
 end
 
@@ -191,18 +215,13 @@ function UI:RefreshResults()
     end
   end
 
-  self:LayoutRows()
+  self:LayoutRows(#materials)
 end
 
 function UI:RefreshSummary()
   self.recipeValue:SetText(ns:GetRecipeLabel())
   self.materialCountValue:SetText(tostring(#(ns.state.orderedMaterials or {})))
   self.totalValue:SetText(ns:GetSummaryText())
-end
-
-function UI:RefreshInputs()
-  self.recipeBox.edit:SetText(ns.db.recipeText or "")
-  self.priceBox.edit:SetText(ns.db.priceText or "")
 end
 
 function UI:RefreshAll()
@@ -223,13 +242,20 @@ function UI:Initialize()
 
   local f = CreateFrame("Frame", "HRcraftsimMainFrame", UIParent, "BackdropTemplate")
   setBackdrop(f)
+  f:SetFrameStrata("DIALOG")
+  f:SetToplevel(true)
+  f:EnableKeyboard(false)
   f:SetSize(ns.db.frame.width, ns.db.frame.height)
   f:SetPoint(ns.db.frame.point, UIParent, ns.db.frame.point, ns.db.frame.x, ns.db.frame.y)
   f:SetMovable(true)
   f:EnableMouse(true)
   f:RegisterForDrag("LeftButton")
   f:SetClampedToScreen(true)
-  f:SetScript("OnDragStart", function(self) self:StartMoving() end)
+  f:SetScript("OnMouseDown", function(self) self:Raise() end)
+  f:SetScript("OnDragStart", function(self)
+    self:Raise()
+    self:StartMoving()
+  end)
   f:SetScript("OnDragStop", function(self)
     self:StopMovingOrSizing()
     local point, _, _, x, y = self:GetPoint(1)
@@ -360,6 +386,7 @@ function UI:ToggleMainFrame()
     self.frame:Hide()
   else
     self.frame:Show()
+    self.frame:SetFrameStrata("DIALOG")
     self.frame:Raise()
     self:RefreshAll()
   end
