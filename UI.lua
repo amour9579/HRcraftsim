@@ -7,6 +7,15 @@ local rowHeight = 26
 local rowSpacing = 4
 local rows = {}
 
+local COLUMNS = {
+  name  = { left = 8,   width = 210, justify = "LEFT"  },
+  qty   = { left = 222, width = 42,  justify = "CENTER"},
+  qual  = { left = 278, width = 78,  justify = "CENTER"},
+  unit  = { left = 374, width = 110, justify = "RIGHT" },
+  total = { left = 492, width = 110, justify = "RIGHT" },
+}
+local CONTENT_WIDTH = 650
+
 local function setBackdrop(frame)
   if frame.SetBackdrop then
     frame:SetBackdrop({
@@ -39,6 +48,20 @@ local function createButton(parent, text, width, height, onClick)
   return b
 end
 
+local function formatGoldNumber(copper)
+  if not copper then return "-" end
+  local gold = copper / 10000
+  return string.format("%.2f g", gold)
+end
+
+local function applyColumn(fontString, key)
+  local col = COLUMNS[key]
+  fontString:ClearAllPoints()
+  fontString:SetPoint("LEFT", col.left, 0)
+  fontString:SetWidth(col.width)
+  fontString:SetJustifyH(col.justify)
+end
+
 local function createScrollEdit(parent, width, height)
   local holder = CreateFrame("Frame", nil, parent, "BackdropTemplate")
   setBackdrop(holder)
@@ -49,27 +72,30 @@ local function createScrollEdit(parent, width, height)
   scroll:SetPoint("BOTTOMRIGHT", -28, 8)
 
   local edit = CreateFrame("EditBox", nil, scroll)
-edit:SetMultiLine(true)
-edit:SetAutoFocus(false)
-edit:SetFontObject(ChatFontNormal)
-edit:SetWidth(width - 42)
-edit:EnableMouse(true)
-edit:SetCursorPosition(0)
-edit:SetScript("OnEscapePressed", edit.ClearFocus)
-holder:EnableMouse(true)
-holder:SetScript("OnMouseDown", function()
-  edit:SetFocus()
-end)
-edit:SetScript("OnEditFocusGained", function()
-  if holder.SetBackdropBorderColor then
-    holder:SetBackdropBorderColor(1, 0.82, 0, 1)
-  end
-end)
-edit:SetScript("OnEditFocusLost", function()
-  if holder.SetBackdropBorderColor then
-    holder:SetBackdropBorderColor(0.35, 0.35, 0.45, 1)
-  end
-end)
+  edit:SetMultiLine(true)
+  edit:SetAutoFocus(false)
+  edit:SetFontObject(ChatFontNormal)
+  edit:SetWidth(width - 42)
+  edit:EnableMouse(true)
+  edit:SetCursorPosition(0)
+  edit:SetScript("OnEscapePressed", edit.ClearFocus)
+
+  holder:EnableMouse(true)
+  holder:SetScript("OnMouseDown", function()
+    edit:SetFocus()
+  end)
+
+  edit:SetScript("OnEditFocusGained", function()
+    if holder.SetBackdropBorderColor then
+      holder:SetBackdropBorderColor(1, 0.82, 0, 1)
+    end
+  end)
+  edit:SetScript("OnEditFocusLost", function()
+    if holder.SetBackdropBorderColor then
+      holder:SetBackdropBorderColor(0.35, 0.35, 0.45, 1)
+    end
+  end)
+
   edit:SetScript("OnTextChanged", function(self)
     local text = self:GetText() or ""
     local lines = 1
@@ -82,16 +108,11 @@ end)
       scroll:UpdateScrollChildRect()
     end
   end)
-  scroll:SetScrollChild(edit)
 
+  scroll:SetScrollChild(edit)
   holder.scroll = scroll
   holder.edit = edit
   return holder
-end
-
-local function formatCopper(copper)
-  if not copper then return "-" end
-  return BreakUpLargeNumbers(copper)
 end
 
 local function clearRows()
@@ -106,48 +127,37 @@ local function ensureRow(index)
   local parent = UI.scrollChild
   local row = CreateFrame("Frame", nil, parent, "BackdropTemplate")
   row:SetHeight(rowHeight)
-  row:SetPoint("LEFT", parent, "LEFT", 2, 0)
-  row:SetPoint("RIGHT", parent, "RIGHT", -2, 0)
   setBackdrop(row)
   row:SetBackdropColor(0.08, 0.08, 0.11, 0.65)
 
   row.name = createLabel(row, "", "GameFontNormal")
-  row.name:SetPoint("LEFT", 8, 0)
-  row.name:SetWidth(220)
+  applyColumn(row.name, "name")
 
   row.qty = createLabel(row, "", "GameFontNormal")
-  row.qty:SetPoint("LEFT", 235, 0)
-  row.qty:SetWidth(40)
-  row.qty:SetJustifyH("CENTER")
+  applyColumn(row.qty, "qty")
 
   row.q1 = createButton(row, "Q1", 36, 20, function()
     if row.itemName then
       ns:SetQuality(row.itemName, 1)
     end
   end)
-  row.q1:SetPoint("LEFT", 290, 0)
+  row.q1:SetPoint("LEFT", COLUMNS.qual.left, 0)
 
   row.q2 = createButton(row, "Q2", 36, 20, function()
     if row.itemName then
       ns:SetQuality(row.itemName, 2)
     end
   end)
-  row.q2:SetPoint("LEFT", 332, 0)
+  row.q2:SetPoint("LEFT", COLUMNS.qual.left + 42, 0)
 
   row.qtxt = createLabel(row, "-", "GameFontNormalSmall")
-  row.qtxt:SetPoint("LEFT", 290, 0)
-  row.qtxt:SetWidth(78)
-  row.qtxt:SetJustifyH("CENTER")
+  applyColumn(row.qtxt, "qual")
 
   row.unit = createLabel(row, "", "GameFontNormal")
-  row.unit:SetPoint("LEFT", 388, 0)
-  row.unit:SetWidth(120)
-  row.unit:SetJustifyH("RIGHT")
+  applyColumn(row.unit, "unit")
 
   row.total = createLabel(row, "", "GameFontNormal")
-  row.total:SetPoint("LEFT", 518, 0)
-  row.total:SetWidth(120)
-  row.total:SetJustifyH("RIGHT")
+  applyColumn(row.total, "total")
 
   rows[index] = row
   return row
@@ -158,16 +168,33 @@ function UI:LayoutRows(count)
   for i = 1, count do
     local row = rows[i]
     row:ClearAllPoints()
+    row:SetPoint("LEFT", self.scrollChild, "LEFT", 0, 0)
+    row:SetPoint("RIGHT", self.scrollChild, "RIGHT", 0, 0)
     if not prev then
-      row:SetPoint("TOPLEFT", self.scrollChild, "TOPLEFT", 0, 0)
+      row:SetPoint("TOP", self.scrollChild, "TOP", 0, 0)
     else
-      row:SetPoint("TOPLEFT", prev, "BOTTOMLEFT", 0, -rowSpacing)
+      row:SetPoint("TOP", prev, "BOTTOM", 0, -rowSpacing)
     end
     prev = row
   end
 
   local contentHeight = math.max(count * (rowHeight + rowSpacing), 1)
   self.scrollChild:SetHeight(contentHeight)
+
+  if self.scroll and self.scroll.UpdateScrollChildRect then
+    self.scroll:UpdateScrollChildRect()
+  end
+
+  local visibleHeight = self.scroll and self.scroll:GetHeight() or 0
+  local needScroll = contentHeight > visibleHeight + 2
+  if self.scrollBar then
+    if needScroll then
+      self.scrollBar:Show()
+    else
+      self.scrollBar:Hide()
+      self.scroll:SetVerticalScroll(0)
+    end
+  end
 end
 
 function UI:RefreshResults()
@@ -181,8 +208,8 @@ function UI:RefreshResults()
 
     row.name:SetText(mat.name)
     row.qty:SetText(tostring(mat.quantity))
-    row.unit:SetText(formatCopper(mat.unitCopper))
-    row.total:SetText(formatCopper(mat.totalCopper))
+    row.unit:SetText(formatGoldNumber(mat.unitCopper))
+    row.total:SetText(formatGoldNumber(mat.totalCopper))
 
     if mat.hasQualityChoice then
       row.q1:Show()
@@ -242,7 +269,8 @@ function UI:Initialize()
 
   local f = CreateFrame("Frame", "HRcraftsimMainFrame", UIParent, "BackdropTemplate")
   setBackdrop(f)
-  f:SetFrameStrata("DIALOG")
+  f:SetFrameStrata("FULLSCREEN_DIALOG")
+  f:SetFrameLevel(100)
   f:SetToplevel(true)
   f:EnableKeyboard(false)
   f:SetSize(ns.db.frame.width, ns.db.frame.height)
@@ -338,43 +366,35 @@ function UI:Initialize()
   local header = CreateFrame("Frame", nil, rightPanel, "BackdropTemplate")
   setBackdrop(header)
   header:SetPoint("TOPLEFT", totalKey, "BOTTOMLEFT", 0, -12)
-  header:SetPoint("TOPRIGHT", rightPanel, "TOPRIGHT", 0, -12)
+  header:SetWidth(CONTENT_WIDTH)
   header:SetHeight(24)
 
   local h1 = createLabel(header, "아이템명", "GameFontHighlightSmall")
-  h1:SetPoint("LEFT", 8, 0)
-  h1:SetWidth(220)
+  applyColumn(h1, "name")
 
   local h2 = createLabel(header, "수량", "GameFontHighlightSmall")
-  h2:SetPoint("LEFT", 235, 0)
-  h2:SetWidth(40)
-  h2:SetJustifyH("CENTER")
+  applyColumn(h2, "qty")
 
   local h3 = createLabel(header, "품질", "GameFontHighlightSmall")
-  h3:SetPoint("LEFT", 290, 0)
-  h3:SetWidth(78)
-  h3:SetJustifyH("CENTER")
+  applyColumn(h3, "qual")
 
-  local h4 = createLabel(header, "개당", "GameFontHighlightSmall")
-  h4:SetPoint("LEFT", 388, 0)
-  h4:SetWidth(120)
-  h4:SetJustifyH("RIGHT")
+  local h4 = createLabel(header, "개당(골드)", "GameFontHighlightSmall")
+  applyColumn(h4, "unit")
 
-  local h5 = createLabel(header, "총액", "GameFontHighlightSmall")
-  h5:SetPoint("LEFT", 518, 0)
-  h5:SetWidth(120)
-  h5:SetJustifyH("RIGHT")
+  local h5 = createLabel(header, "총액(골드)", "GameFontHighlightSmall")
+  applyColumn(h5, "total")
 
   local scroll = CreateFrame("ScrollFrame", nil, rightPanel, "UIPanelScrollFrameTemplate")
   scroll:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, -6)
-  scroll:SetPoint("BOTTOMRIGHT", rightPanel, "BOTTOMRIGHT", -28, 0)
+  scroll:SetPoint("BOTTOMRIGHT", rightPanel, "BOTTOMRIGHT", -6, 0)
 
   local scrollChild = CreateFrame("Frame", nil, scroll)
-  scrollChild:SetSize(620, 1)
+  scrollChild:SetSize(CONTENT_WIDTH, 1)
   scroll:SetScrollChild(scrollChild)
 
   self.scroll = scroll
   self.scrollChild = scrollChild
+  self.scrollBar = scroll.ScrollBar
 
   self.recipeBox.edit:SetText(ns.db.recipeText or "")
   self.priceBox.edit:SetText(ns.db.priceText or "")
