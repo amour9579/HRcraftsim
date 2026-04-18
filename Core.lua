@@ -1,4 +1,3 @@
-\
 local addonName, ns = ...
 
 HRcraftsim = ns
@@ -80,21 +79,13 @@ local function splitLines(text)
   local lines = {}
   text = tostring(text or "")
   text = text:gsub("\r\n", "\n"):gsub("\r", "\n")
-  for line in text:gmatch("([^\n]*)\n?") do
-    if line == "" and #lines > 0 and lines[#lines] == "__END__" then
-      break
-    end
+  for line in text:gmatch("([^\n]+)") do
     line = trim(line)
     if line ~= "" then
       table.insert(lines, line)
     end
   end
   return lines
-end
-
-local function copperToGoldValue(copper)
-  if not copper then return 0 end
-  return copper / 10000
 end
 
 local function formatGoldFromCopper(copper)
@@ -116,10 +107,6 @@ function ns:Print(msg)
   DEFAULT_CHAT_FRAME:AddMessage("|cff66ccffHRcraftsim|r " .. tostring(msg))
 end
 
-function ns:GetDB()
-  return HRcraftsimDB
-end
-
 function ns:InitDB()
   HRcraftsimDB = HRcraftsimDB or deepcopy(defaults)
   mergeDefaults(HRcraftsimDB, defaults)
@@ -132,27 +119,27 @@ function ns:ParseRecipeText(text)
   local recipeNames = {}
 
   for _, raw in ipairs(splitLines(text)) do
-    local recipeName, rest = raw:match('^(.-)%^"(.*)$')
-    recipeName = trim(recipeName)
+    local parts = {}
+    local start = 1
+    while true do
+      local s, e = raw:find('%^"', start)
+      if not s then
+        table.insert(parts, raw:sub(start))
+        break
+      end
+      table.insert(parts, raw:sub(start, s - 1))
+      start = e + 1
+    end
+
+    local recipeName = trim(parts[1] or "")
     if recipeName ~= "" then
       table.insert(recipeNames, recipeName)
     end
 
-    local parts = {}
-    if rest then
-      table.insert(parts, rest)
-      for extra in raw:gmatch('%^"(.-)') do
-        -- handled below by generic split; placeholder to keep raw unchanged
-      end
-    end
-
-    local segments = {}
-    for seg in raw:gmatch('%^"(.-)') do
-      table.insert(segments, seg)
-    end
-
     local foundAny = false
-    for _, segment in ipairs(segments) do
+
+    for i = 2, #parts do
+      local segment = parts[i]
       local endQuote = segment:find('"', 1, true)
       if endQuote then
         local itemName = normalizeName(segment:sub(1, endQuote - 1))
@@ -311,16 +298,8 @@ function ns:GetSummaryText()
   return formatGoldFromCopper(self.state.totalCopper)
 end
 
-function ns:GetGoldValue(copper)
-  return copperToGoldValue(copper)
-end
-
-function ns:FormatGold(copper)
-  return formatGoldFromCopper(copper)
-end
-
 SLASH_HRCRAFTSIM1 = "/hrcs"
-SlashCmdList["HRCRAFTSIM"] = function(msg)
+SlashCmdList["HRCRAFTSIM"] = function()
   if ns.UI and ns.UI.ToggleMainFrame then
     ns.UI:ToggleMainFrame()
   end
@@ -328,7 +307,7 @@ end
 
 local ev = CreateFrame("Frame")
 ev:RegisterEvent("ADDON_LOADED")
-ev:SetScript("OnEvent", function(_, event, arg1)
+ev:SetScript("OnEvent", function(_, _, arg1)
   if arg1 ~= addonName then return end
   ns:InitDB()
   if ns.UI and ns.UI.Initialize then
